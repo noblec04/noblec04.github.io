@@ -11,7 +11,7 @@ body{text-align:center;}
 /* 750 centered, and backward compatibility */ 
 #doc,#doc2,#doc3,.yui-t1,.yui-t2,.yui-t3,.yui-t4,.yui-t5,.yui-t6,.yui-t7 {
 	margin:auto;text-align:left;
-	width:40em;*width:57em;min-width:650px;}
+	width:40em;*width:57em;min-width:638px;}
 /* 950 centered */ 
 #doc2 {
 	width:73.074em;*width:71.313em;min-width:750px;}
@@ -137,7 +137,7 @@ width:auto;}
 
 #header{
 	height:20px;
-    color:#b70101;
+    color:#95a1af;
     font-family:sans-serif;
 	background-color:#FFFFFF;
 	margin:0;
@@ -171,7 +171,7 @@ width:auto;}
 	}
 	
 .menu{
-	height:800px;
+	height:600px;
 	background:#FFFFFF;
 	border-top:#FFFFFF 1px solid;
 	margin-left:5px;
@@ -221,8 +221,10 @@ text-align: center;
 	}
 	
 #footer{
-	height:125px;
-	background:#272727;
+	height:180px;
+    background-image:url("include/footer.jpg");
+    background-position:center;
+    background-repeat: no-repeat;
 	border-top:#FFFFFF 2px solid;
 	margin:0;
 	padding:0;
