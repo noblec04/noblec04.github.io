@@ -1,0 +1,21 @@
+<?php
+$to = "recipient@example.com";
+$subject = "Hi!";
+$body = "Hi,\n\nHow are you?";
+if (mail($to, $subject, $body)) {
+  echo("<p>Message successfully sent!</p>");
+ } else {
+  echo("<p>Message delivery failed...</p>");
+ }
+?>
+
+<?php
+$to      = 'nobody@example.com';
+$subject = 'the subject';
+$message = 'hello';
+$headers = 'From: webmaster@example.com' . "\r\n" .
+    'Reply-To: webmaster@example.com' . "\r\n" .
+    'X-Mailer: PHP/' . phpversion();
+
+mail($to, $subject, $message, $headers);
+?>

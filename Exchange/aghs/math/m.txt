@@ -1,0 +1,134 @@
+function multiplyMatr(matrixA, matrixB) {
+	var rowsA = matrixA.length;
+	var rowsB = matrixB.length; // == colsA
+	var colsB = matrixB[0].length;
+	var matrixC = new Array(rowsA);
+
+	for (var i=0; i < rowsA; i++) {
+		matrixC[i] = new Array(colsB);
+	}
+
+	for (var k=0; k < colsB; k++) {
+		for (var i=0; i < rowsA; i++) {
+			var temp = new Array(0,1);
+			for (var j=0; j < rowsB; j++) {
+				temp =new Array(frac1[0] * frac2[1] + frac1[1] * frac2[0],frac1[1] * frac2[1] )
+			}
+			matrixC[i][k] = temp;
+		}
+	}
+	return matrixC;
+}
+
+ab0
+cd0
+001
+
+all ops only need these;
+
+
+function matrixMult()
+{
+	counter++; // incrementing global counter
+ 
+	/* Get form values */
+	var rowsInput = document.getElementById("rows").value;
+	var colsInput = document.getElementById("columns").value;
+	var output    = document.getElementById("output");
+	output.value  += "[Output " + counter + "]----------------------\n";
+ 
+	rows = rowsInput.split(','); // split the rows into separate values
+	cols = colsInput.split(',');
+ 
+	n = rows.length;
+ 
+	/* Testing for valid matrix dimensions */
+	var isM = true;
+	for( i = 0; i < n-1; i ++ )
+	{
+ 
+		if ( cols[i] != rows[i+1] )
+		{
+			//prompt( "cols" + cols[i] + " rows:" + rows[i+1]);
+			output.value += "Cannot multiply the chain, dimensions not match!\n";
+			isM = false;
+			break;
+		}
+	}
+ 
+	if ( isM ) output.value += "Matrix-chain is multipliable\n";
+	else return false;
+ 
+	/* initialize the array */
+	matrix = _2DArray(n,n);
+	sequence = _2DArray(n,n);
+ 
+	/* run the algorithm */
+	for( d = 1; d <= n ; d++) // diagonal --> the length of the chain
+	{
+		for ( i = 0; i < n - d; i++) // sub problems from
+		{
+			j = i + d;
+			matrix[i][j] = 2147483647; // max int
+			for( k = i; k <= j - 1;k++)
+			{	m = matrix[i][k] + matrix[k+1][j] + rows[i]*cols[k]*cols[j];
+				if ( m < matrix[i][j] )
+				{
+					matrix[i][j] = m;
+					sequence[i][j] = k;
+				}
+			}
+		}
+	}
+ 
+ 
+	/* Output the cost table */
+	for( i = 0; i < n ; i++)
+	{
+		for( j=0; j < n; j++)
+		{
+			output.value += matrix[i][j];
+			if ( j < n - 1)
+				output.value += " \t";
+		}
+		output.value += "\n";
+	}
+ 
+ 
+	output.value += "\n";
+ 
+	/* Output the last index of parenthesization */
+	for( i = 0; i < n ; i++)
+	{
+		for( j=0; j < n; j++)
+		{
+			output.value += sequence[i][j];
+			if ( j < n - 1)
+				output.value += " \t";
+		}
+		output.value += "\n";
+	}
+ 
+	output.value += "The required number of multiplications is " + matrix[0][n-1] + "\n";
+	output.value += "Paranthesized: " + parenthesize(sequence, 0, n-1) + "\n";
+}
+
+
+for (int i = 0; i < 2; i++)   
+                         {   
+                                for (int j = 0; j < 2; j++)   
+                         {   
+                           
+                                result[i, j] += matrix1[i, j] * matrix2[i, j];
+                                Console.Write(result[i, j] + " ");
+                         }  Console.WriteLine();
+                         }  Console.ReadLine();
+
+ for(i = 0; i < 4; i++)
+    for(j = 0; j < 4; j++)
+      for(k = 0, mat[i][j] = 0; k < 4; k++)
+        mat[i][j] += mat1[i][k] * mat2[k][j];
+
+  return mat;
+}
+ 

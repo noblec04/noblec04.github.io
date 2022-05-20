@@ -1,0 +1,1365 @@
+/**
+  *  Description:
+  *    add support (to any object or class) by mixing this class into your own
+  *  
+  *  Requires prototype.js
+  *  
+  *  Usage:
+  *    To publish custom events:
+  *      1. mix this class with your own via
+  *         Object.extend( [your class or prototype], Event.Publisher )
+  *      2. post events by calling
+  *         this.dispatchEvent( [event name], [data for event] )
+  *   
+  *    To activate and deactivate the event-tracing feature, just call 
+  *      this.toggleEventsTrace()
+  **/
+ 
+Event.Publisher = Class.create();
+Object.extend( Event.Publisher, 
+{
+    _ls_event_targets: null,
+    
+    _event_source_id: null,
+    
+    _fl_trace_events: false,
+    
+    getEventSourceId: function()
+    {
+        if ( typeof this._event_source_id == 'function' )
+            return this._event_source_id();
+        else
+            return this._event_source_id;
+    },
+    
+    getEventTarget: function( event_name )
+    {
+        if ( ! this._ls_event_targets )
+            this._ls_event_targets = new Array();
+        
+        if ( ! this._ls_event_targets[ event_name ] )
+            document.body.appendChild(
+                this._ls_event_targets[ event_name ] = document.createElement( 'A' )
+            );
+        
+        return this._ls_event_targets[ event_name ];
+    },
+    
+    addEventListener: function( event_name, callback_func, capturing )
+    {
+        var targ = this.getEventTarget( event_name );
+        
+        Event.observe( targ, 'click', callback_func, capturing );
+        
+        if ( this._fl_trace_events )
+        {
+            var data = 
+            {
+                publisher: this.getEventSourceId(),
+                event_name: event_name,
+                listener: callback_func,
+                capturing: capturing,
+                event_source_proxy: targ
+            };
+            
+            this.dispatchEvent( 'eventListenerAdded', data, true, true );
+        }
+    },
+    
+    removeEventListener: function( event_name, callback_func, capturing )
+    {
+        var targ = this.getEventTarget( event_name );
+        
+        Event.stopObserving( targ, 'click', callback_func, capturing );
+        
+        if ( this._fl_trace_events )
+        {
+            var data = 
+            {
+                publisher: this.getEventSourceId(),
+                event_name: event_name,
+                listener: callback_func,
+                capturing: capturing,
+                event_source_proxy: targ
+            };
+            
+            this.dispatchEvent( 'eventListenerRemoved', data, true, true );
+        }
+    },
+    
+    dispatchEvent: function( event_name, data, can_bubble, cancelable )
+    {
+        var targ = this.getEventTarget( event_name );
+        var event_data = {
+            event_name: event_name,
+            event_target: this,
+            data: data ? data : null
+        };
+        
+        if ( ! can_bubble ) can_bubble = false;
+        if ( ! cancelable ) cancelable = false;
+        
+        var event = Event.create( targ, event_data, can_bubble, cancelable, true );
+        
+        if ( this._fl_trace_events )
+        {
+            if ( event_name.match( /event(?:ListenerAdded|ListenerRemoved|Dispatched|Received)/ ) )
+                return;
+            
+            var data = 
+            {
+                publisher: this.getEventSourceId(),
+                event_name: event_name,
+                event_data: event_data,
+                can_bubble: can_bubble,
+                cancelable: cancelable,
+                event_source_proxy: targ,
+                result: event
+            };
+            
+            this.dispatchEvent( 'eventDispatched', data, true, true );
+        }
+    },
+    
+    toggleEventsTrace: function()
+    {
+        var trace = Event.Tracer.findTracer();
+        
+        if ( ! trace || ! this._fl_trace_events )
+        {
+            this._fl_trace_events = true;
+            
+            trace = Event.Tracer.startTrace();
+            
+            trace.registerPublisher( this );
+        }
+        else
+        {
+            this._fl_trace_events = false;
+            
+            if ( trace )
+                trace.unregisterPublisher( this );
+        }
+        
+        return this._fl_trace_events;
+    },
+    
+    isEventsTraceActive: function()
+    {
+        return this._fl_trace_events;
+    }
+} );
+Event.Listener
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+/**
+  *  MIX IN: Event.Listener
+  *  Description:
+  *    easily add support for receiving totally custom events
+  *    (to any object or class) by mixing this class into
+  *    your own
+  *  Usage:
+  *    To receive custom events:
+  *      1. mix this class with your own via
+  *         Object.extend( [your class or prototype], EventListener )
+  *      2. listen for events by calling (from your object)
+  *         this.listen()
+  *         (see params for this.listen, below)
+  **/
+Event.Listener = Class.create();
+Object.extend( Event.Listener,
+{
+    _listens: new Array(),
+    
+    getEventHandlerName: function( event_name )
+    {
+        var onEvent_name = event_name.split( /[ _]/ ).join( '-' ).camelize();
+        
+        return "on" + onEvent_name.charAt( 0 ).toUpperCase() + onEvent_name.substr( 1 );
+    },
+    
+    /**
+      *  Params:
+      *    event_source [object]:
+      *      the object which will generate the events, and which implements (or
+      *      mixes in) the Event.Publisher interface (we need addEventListener)
+      *    event_name [string]:
+      *      the name of the event for which your object will listen
+      *    use_capture [boolean]:
+      *      standard DOM Event API param
+      *    onEvent_name [string]:
+      *      the name of the method in your object which will be called when the
+      *      event is received if you omit this param, listen will look for a
+      *      function named with the CapitalizedCamelCased name of the event with
+      *      "on" at the front. So, if the event is named "message_received",
+      *      we'll look for a function named "onMessageReceived" You can override
+      *      this behavior by overriding getEventHandlerName in your object.
+      **/
+    listenForEvent: function( event_source, event_name, use_capture, onEvent_name )
+    {
+        if ( ! onEvent_name )
+            onEvent_name = this.getEventHandlerName( event_name );
+        
+        var cb = this[ onEvent_name ].bindAsEventListener( this );
+        this._listens.push( [ event_source, event_name, use_capture, onEvent_name, cb ] )
+        
+        event_source.addEventListener( event_name, cb, use_capture );
+    },
+    
+    stopListeningForEvent: function( event_source, event_name, use_capture, onEvent_name )
+    {
+        if ( ! onEvent_name )
+            onEvent_name = this.getEventHandlerName( event_name );
+        
+        var ix_item;
+        var ls = this._listens.detect( function( val, ix )
+        {
+            if ( ( val[ 0 ] == event_source )
+              && ( val[ 1 ] == event_name )
+              && ( val[ 2 ] == use_capture )
+              && ( val[ 3 ] == onEvent_name ) )
+            {
+                ix_item = ix;
+                return true;
+            }
+        } );
+        
+        if ( ix_item )
+        {
+            this._listens.splice( ix_item, 1 );
+            
+            event_source.removeEventListener( event_name, ls[ 4 ], use_capture );
+            
+            return true;
+        }
+        
+        return false;
+    }
+} );
+Event
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+/**
+  *  Extensions to Prototype's Event object,
+  *  for cleanly creating and dispatching custom events
+  *  
+  *  Called from Event.Publisher
+  **/
+Object.extend( Event,
+{
+    create: function( target, event_data, can_bubble, cancelable, fl_dispatch )
+    {
+        var event;
+        
+        if ( document.createEvent )  // gecko, safari
+        {
+            if ( ! can_bubble ) can_bubble = false;
+            if ( ! cancelable ) cancelable = false;
+            
+            if ( /Konqueror|Safari|KHTML/.test( navigator.userAgent ) )
+            {
+                event = document.createEvent( 'HTMLEvents' )
+                
+                event.initEvent( 'click', can_bubble, cancelable );
+            }
+            else  // gecko uses MouseEvents
+            {
+                event = document.createEvent( 'MouseEvents' )
+                
+                event.initMouseEvent( "click", can_bubble, cancelable,
+                                      window, 0, 0, 0, 0, 0,
+                                      false, false, false, false, 0, null );
+            }
+        }
+        else  // msie
+        {
+            event = document.createEventObject();
+        }
+        
+        event.event_data = event_data;
+        
+        if ( fl_dispatch )
+            Event.dispatch( target, event );
+        
+        return event;
+    },
+    
+    dispatch: function( target, event )
+    {
+        if ( document.createEvent )
+            return target.dispatchEvent( event );
+        else
+            return target.fireEvent( 'onclick', event );
+    }
+} );
+Event.Tracer
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+/**
+  *  Event Tracer (singleton class)
+  *  (c) 2006 Seth Dillingham <seth.dillingham@gmail.com>
+  *
+  *  This software is hereby released into the public domain. Do with it as
+  *  you please, but with the understanding that it is provided "AS IS" and 
+  *  without any warranty of any kind.
+  *  
+  *  (But I'd love to be told about where and how this code is being used.)
+  **/
+ 
+/**
+  *  Singleton Object: Event.Tracer
+  * 
+  *  Description:
+  *    provides some minimal event debugging/tracing/logging
+  *    Event.Tracer is a sort of singleton
+  *    Only use Event.Tracer for starting and stopping the event tracing
+  *      service, and for acquiring a reference to the live tracing object
+  *      (which is returned by both find_tracer and start_trace)
+  *  
+  *  IMPORTANT
+  *    You only need to use this file when debugging your custom events.
+  *  
+  *  Requires:
+  *    prototype.js
+  *    the custom events services provided by event_mixins.js
+  *  
+  *  Usage:
+  *    Start up event tracing by calling Event.Tracer.startTrace( viewport )
+  *      viewport is a div (or the id of a div) on your page where trace
+  *      output will be written
+  *      returns: a reference to an instance of Event.Tracer.prototype
+  *      (not the singleton)
+  *    Kill the tracer (disable tracing in all publishers) with:
+  *      Event.Tracer.stopTrace()
+  *    Note that you can start the tracer (if it's not already running)
+  *      and register your publishers, all in one step, with a call like:
+  *      [publisher].toggleEventsTrace()
+  **/
+ 
+Event.Tracer = Class.create();
+Object.extend( Event.Tracer,
+{
+    _tracer: null,
+    
+    findTracer: function()
+    {
+        return ( this._tracer != undefined ) ? this._tracer : false;
+    },
+    
+    startTrace: function( viewport )
+    {
+        if ( ! this._tracer )
+            this._tracer = new Event.Tracer( viewport );
+        
+        return this._tracer;
+    },
+    
+    stopTrace: function()
+    {
+        if ( this._tracer )
+        {
+            this._tracer.shutdown();
+            
+            delete this._tracer;
+            
+            this._tracer = null;
+            
+            return true;
+        }
+        
+        return false;
+    }
+} );
+ 
+/**
+  *  Class Prototype: Event.Tracer.prototype
+  *  
+  *  Description:
+  *    acts as a "logger" for custom event publishers which
+  *    are registered with the tracer
+  *    
+  *    This code should generally be consider a black box: you shouldn't
+  *    ever need to call it from your own code, because it's called 
+  *    automatically from any class which has been extended with
+  *    Event.Publisher (after calling .toggleEventsTrace() to enable
+  *    debugging on the publisher)
+  *  
+  *  Requires:
+  *    prototype.js
+  *    the custom events services provided by event_mixins.js
+  *  
+  *  Usage:
+  *    Generally, you can activate the tracer from your event publisher
+  *    by calling[publisher].toggleEventsTrace()
+  **/
+ 
+Object.extend( Event.Tracer.prototype,
+{
+    _publishers: null,
+    
+    _viewport: null,
+    
+    _outputlist: null,
+    
+    initialize: function( viewport )
+    {
+        this._publishers = {};
+        
+        if ( viewport )
+            viewport = $( viewport );
+        if ( ! viewport )
+        {
+            viewport = $( 'event_tracer_output' );
+            
+            if ( ! viewport )
+                throw new Error( 'No view port specified, and none found.' );
+        }
+        
+        this._viewport = viewport;
+        
+        var ls = $( 'event_tracer_output_list' );
+        if ( ! ls )
+        {
+            ls = document.createElement( 'UL' );
+            ls.id = 'event_tracer_output_list';
+            viewport.appendChild( ls );
+        }
+        this._outputlist = ls;
+    },
+    
+    _shutdownPublisher: function( pair )
+    {
+        this.unregisterPublisher( pair[ 1 ].publisher );
+    },
+    
+    shutdown: function()
+    {
+        $H( this._publishers ).each( this._shutdownPublisher.bind( this ) );
+        
+        var li = document.createElement( 'LI' );
+        li.innerHTML = '<b>Tracer shutdown.</b>';
+        
+        this._outputlist.insertBefore( li, this._outputlist.firstChild );
+    },
+    
+    unregisterPublisher: function( event_publisher )
+    {
+        this.stopListeningForEvent( event_publisher,
+                                    'eventListenerAdded',
+                                    true,
+                                    'onEventListenerAdded' );
+        this.stopListeningForEvent( event_publisher,
+                                    'eventListenerRemoved',
+                                    true,
+                                    'onEventListenerRemoved' );
+        this.stopListeningForEvent( event_publisher,
+                                    'eventDispatched',
+                                    true,
+                                    'onEventDispatched' );
+        
+        delete this._publishers[ event_publisher.getEventSourceId() ];
+    },
+    
+    registerPublisher: function( event_publisher )
+    {
+        var id = event_publisher.getEventSourceId();
+        var publisher_data = { id: id, publisher: event_publisher };
+        
+        this._publishers[ id ] = publisher_data;
+        
+        this.listenForEvent( event_publisher,
+                             'eventListenerAdded',
+                             true,
+                             'onEventListenerAdded' );
+        this.listenForEvent( event_publisher,
+                             'eventListenerRemoved',
+                             true,
+                             'onEventListenerRemoved' );
+        this.listenForEvent( event_publisher,
+                             'eventDispatched',
+                             true,
+                             'onEventDispatched' );
+    },
+    
+    traceEvent: function( evt )
+    {
+        var li = document.createElement( 'LI' );
+        var eventinfo = document.createElement( 'UL' );
+        
+        li.innerHTML = '<b>Event:</b> ' + evt.event_data.event_name;
+        
+        this._outputlist.insertBefore( li, this._outputlist.firstChild );
+        
+        li.appendChild( eventinfo );
+        this._outputlist = eventinfo;
+        
+        $H( evt.event_data ).each( this._prettyprintObject.bind( this ) );
+        
+        this._outputlist = this._outputlist.parentNode.parentNode;
+    },
+    
+    onEventListenerAdded: function( evt )
+    {
+        this.traceEvent( evt );
+    },
+    
+    onEventListenerRemoved: function( evt )
+    {
+        this.traceEvent( evt );
+    },
+    
+    onEventDispatched: function( evt )
+    {
+        evt = evt.event_data.data;
+        
+        var li = document.createElement( 'LI' );
+        var eventinfo = document.createElement( 'UL' );
+        
+        li.innerHTML = '<b>Event Dispatched:</b> <span class="event_name">' +
+                       evt.event_data.event_name + '</span>';
+        
+        this._outputlist.insertBefore( li, this._outputlist.firstChild );
+        
+        li.appendChild( eventinfo );
+        
+        this._outputlist = eventinfo;
+        
+        $H( evt.event_data ).each( this._prettyprintObject.bind( this ) );
+        
+        this._outputlist = this._outputlist.parentNode.parentNode;
+    },
+    
+    _prettyprintObject: function( pair )
+    {
+        var li = document.createElement( 'LI' );
+        
+        li.innerHTML = '<span class="key">' + pair[ 0 ] + ':</span> ';
+        if ( typeof pair[ 1 ] != "undefined" )
+            li.innerHTML +=  '<span class="value">' +
+                             pair[ 1 ].toString() + '</span>';
+        
+        this._outputlist.appendChild( li );
+        
+        switch ( pair[ 0 ] )
+        {
+            case 'data':
+            case 'event_data':
+                var data = document.createElement( 'UL' );
+                
+                li.appendChild( data );
+                
+                this._outputlist = data;
+                
+                $H( pair[ 1 ] ).each( this._prettyprintObject.bind( this ) );
+                
+                this._outputlist = this._outputlist.parentNode.parentNode;
+            
+            default:
+                if ( pair[ 1 ] && pair[ 1 ].tagName )
+                    li.innerHTML = '<span class="key">' +
+                                   pair[ 0 ] +
+                                   ':</span> <span class="value">' +
+                                   pair[ 1 ].tagName +
+                                   '</span>';
+        }
+    }
+} );
+Object.extend( Event.Tracer.prototype, Event.Listener );
+Event Broker
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+/**
+  *  Description:
+  *    Allows listeners to subscribe to event types, and remain
+  *    blissfully unaware of the available publishers of those events
+  *
+  *  Requires prototype.js
+  *  
+  *  Usage:
+  *    You'll usually want to create a copy of the Broker object by mixing 
+  *      it in with one of your own classes as follows:
+  *      Object.extend( your_obj, Event.Broker )
+  *    
+  *    Publishers register the event types they send with a call to 
+  *      your_broker_object.registerEventsPublisher
+  *      and "unregister" via your_broker_object.unregisterEventsPublisher
+  *   
+  *    Nothing changes for the event listeners, except they call their
+  *      listen() method once for each event type (passing a reference
+  *      to the broker) instead of once per event type per publisher
+  **/
+ 
+Event.Broker = Class.create();
+Object.extend( Event.Broker,
+{
+    _listeners: null,
+    
+    _publishers: null,
+    
+    _initListenerType: function( event_type )
+    {
+        if ( this._listeners == null )
+            this._listeners = {};
+        
+        if ( typeof( this._listeners[ event_type ] ) == "undefined" )
+            this._listeners[ event_type ] = new Array();
+    },
+    
+    _initPublisherType: function( event_type )
+    {
+        if ( this._publishers == null )
+            this._publishers = {};
+        
+        if ( this._publishers[ event_type ] == undefined )
+            this._publishers[ event_type ] = new Array();
+    },
+    
+    /**
+     *  Register a publisher with the broker. Listeners that want the types
+     *  of events produced by this publisher will be subscribed automatically.
+     *  
+     *  Params:
+     *    event_types: an event type, or an arry of event types,
+     *      which are published by the publsher
+     *    publisher: the publisher object being registered with the broker
+     *      (must mix in Event.Publisher, or implement the same public interface)
+    **/
+    registerEventsPublisher: function( event_types, publisher )
+    {
+        if ( typeof( event_types ) != typeof( [] ) )
+            event_types = [event_types];
+        
+        event_types.each( function( event_type )
+        {
+            this._initPublisherType( event_type );
+            
+            this._publishers[ event_type ].push( publisher );
+            
+            this._initListenerType( event_type );
+            
+            this._listeners[ event_type ].each(
+                function( listener_rec )
+                {
+                    publisher.addEventListener( event_type,
+                                                listener_rec.listener,
+                                                listener_rec.useCapture );
+                }
+            );
+        }.bind( this ) );
+    },
+    
+    /**
+     *  Unregister a publisher with the broker. Listeners that had been
+     *  automatically subscribed to the publisher will be un-subscribed.
+     *  
+     *  Params:
+     *    event_types: an event type, or an arry of event types,
+     *      which are published by the publsher
+     *    publisher: the publisher object being un-registered with the broker
+    **/
+    unregisterEventsPublisher: function( event_types, publisher )
+    {
+        if ( typeof( event_types ) != typeof( [] ) )
+            event_types = [event_types];
+        
+        event_types.each( function( event_type )
+        {
+            this._listeners[ event_type ].each( function( listener_rec )
+            {
+                publisher.removeEventListener( event_type,
+                                               listener_rec.listener,
+                                               listener_rec.useCapture );
+            } );
+            
+            var ix = this._publishers[ event_type ].indexOf( publisher );
+            
+            if ( ix > -1 )
+                this._publishers[ event_type ].splice( ix, 1 );
+        } );
+        
+        return;
+    },
+    
+    /**
+     *  Register a listener with the broker. Causes the listener
+     *  to be automatically registered with all publishers that produce 
+     *  the specified event_type.
+     *  
+     *  You shouldn't have to  call this from your own code: it's
+     *  called automatically when your listener listens for events
+     *  from the broker.
+     *  
+     *  See Event.Listener.listenForEvent
+    **/
+    addEventListener: function( event_type, event_listener, useCapture )
+    {
+        this._initListenerType( event_type );
+        
+        this._listeners[ event_type ].push(
+        {
+            listener: event_listener,
+            useCapture: useCapture
+        } );
+        
+        this._initPublisherType( event_type );
+        
+        this._publishers[ event_type ].each( function( publisher )
+        {
+            publisher.addEventListener( event_type,
+                                        event_listener,
+                                        useCapture );
+        } );
+    },
+    
+    /**
+     *  Un-register a listener with the broker. The listener is
+     *  "unsubscribed" from all publishers of the given event_type
+     *  
+     *  You shouldn't have to  call this from your own code: it's
+     *  called automatically when your listener stops listening
+     *  for events from the broker.
+     *  
+     *  See Event.Listener.stopListeningForEvent
+    **/
+    removeEventListener: function( event_type, event_listener, useCapture )
+    {
+        this._publishers[ event_type ].each( function( publisher )
+        {
+            publisher.removeEventListener( event_type,
+                                           event_listener,
+                                           useCapture );
+        } );
+        
+        var ix_listener = -1;
+        
+        this._listeners[ event_type ].each( function( listener_rec, ix )
+        {
+            ix_listener = ix;
+            throw $break;
+        } );
+        
+        if ( ix_listener > -1 )
+            this._listeners[ event_type ].splice( ix_listener, 1 );
+        
+        return;
+    },
+    
+    /**
+     *  tracing/debugging feature only
+     *  
+     *  toggles event tracing on all of the publishers of a given type of event
+     *
+     *  note: this is a first pass at this feature. Since it toggles
+     *  the trace feature, toggling event tracing on two different event_types 
+     *  could activate trace for an object via the first event type, and then
+     *  deactivate it with the second event type
+    **/
+    toggleEventPublishersTrace: function( event_type )
+    {
+        this._initPublisherType( event_type );
+        
+        this._publishers[ event_type ].each( function( publisher )
+        {
+            publisher.toggleEventsTrace();
+        } );
+    }
+} );

@@ -1,0 +1,25 @@
+function Event()
+{
+this.eventHandlers = new Array();
+}
+Event.prototype.addHandler = function(eventHandler)
+{
+this.eventHandlers.push(eventHandler);
+}
+Event.prototype.raise = function(args)
+{
+for(var i = 0; i < this.eventHandlers.length; i++)
+{
+this.eventHandlers[i](args);
+}
+}
+function kickAssHandler(args)
+{
+alert(”event kickAss raised with argument ” + args);
+}
+//create event
+onKickAss = new Event();
+//add handler
+onKickAss.addHandler(kickAssHandler);
+//raise event
+onKickAss.raise(”wohoo”);

@@ -1,0 +1,317 @@
+tickInt = 5;
+ 
+aghs.anim = {};
+aghs.fx = {};
+
+aghs.extend(aghs.fx,(function() {
+							  
+	function FadeIn(e){
+	var fdobj = nn6 ? e.target : event.srcElement;
+	fdobj.style.filter='alpha(opacity=' + fdobj.to + ')' ;
+	fdobj.style.opacity=(fdobj.to/10);
+	fdobj.fade=false;
+	fdobj.onmouseout=aghs.fx.FadeOut;
+	}
+	
+	function FadeOut(e){
+	var fdobj = nn6 ? e.target : event.srcElement;
+	fdobj.style.filter='alpha(opacity=' + fdobj.from + ')' ;
+	fdobj.style.opacity=(fdobj.from/100);
+	fdobj.fade=true;
+	}
+	
+	function fadein(id,from,steps){
+		this.elem = get(id);
+		this.pos = new aghs.geom.vector2(this.elem.style.left,this.elem.style.top)
+		this.startAlpha = this.elem.style.opacity || parseInt(this.elem.style.filters);
+		this.ratio = this.startAlpha - from/steps;
+		this.next = function(ind){
+			this.elem.style.opacity = (this.startAlpha + this.ratio * ind)/100;
+			this.elem.filter = 'alpha(opacity = '+(this.startAlpha + (this.ratio * ind) ) + ' ) ';
+			return this.pos
+		}
+	}
+	
+	function fadeout(id,to,steps){
+		this.elem = get(id);
+		this.pos = new aghs.geom.vector2(this.elem.style.left,this.elem.style.top)
+		this.startAlpha = this.elem.style.opacity || 100;
+		this.ratio = this.startAlpha - to/steps;
+		this.i = 2;
+		this.steps = steps;
+		this.next = function(ind){
+			this.elem.style.opacity = this.startAlpha - this.ratio * ind;
+			this.elem.filter = 'alpha(opacity = '+(this.startAlpha + (this.ratio * ind)/100 ) + ' ) ';
+			return this.pos
+		}
+	}
+  return {
+	  fadein :fadein,
+	  fadeout :fadeout,
+	  FadeIn:FadeIn,
+	  FadeOut:FadeOut
+  }
+})())
+
+aghs.anim.moveto = function(elem,x,y){
+	elem.style.position = 'absolute';
+	if(x != Number.NaN){
+	elem.style.left = x+'px';
+	}
+	if(y != Number.NaN){
+	elem.style.top = y+'px';
+	}
+}
+		
+
+aghs.anima = function(obj,css,from,to,duration,tween){
+	var t = this;
+	this.css = css;
+	this.obj = obj;
+	this.from = from;
+	this.to = to;
+	this.finished = new aghs.Event();
+	this.started = new aghs.Event();
+	this.animating = new aghs.Event();
+	this.dur= duration;
+	this.step = /*Math.mod*/(to - from)/duration;
+	this.tween = tween?tween:function(r,b,c,d){return ((c-b)/d)*r};
+	
+	if(this.css == 'color' || t.css == 'background'){
+		
+		this.b = aghs.colour.rgb(t.from);
+        this.e  = aghs.colour.rgb(t.to);
+		
+	}
+	
+	this.next = function(ix){
+		if((t.to>t.from)?((t.step*ix)>t.to):((t.step*ix)<t.to)){t.stop()}else{
+			
+			if(t.css == 'opacity'){
+				
+				t.obj.style.opacity = t.from+t.tween(ix,t.from,t.to,t.dur); t.obj.style.filter = 'alpha(opacity = '+ (t.from+t.tween(ix,t.from,t.to,t.dur))*100 +')';
+			}else{
+		
+				if(t.css == 'left' || t.css == 'right' || t.css == 'height' || t.css == 'width' || t.css == 'font-size' || t.css == 'margin-top' || t.css == 'margin-left' || t.css == 'top'){
+					t.obj.style[t.css] = t.from+t.tween(ix,t.from,t.to,t.dur) + 'px';
+				}else{
+					if(t.css == 'color' || t.css == 'background'){
+					 	var red = t.b[0]+t.tween(ix,t.b[0],t.e[0],t.dur);
+					 	var blue = t.b[1]+t.tween(ix,t.b[1],t.e[1],t.dur);
+					 	var green = t.b[2]+t.tween(ix,t.b[2],t.e[2],t.dur);
+					    t.obj.style[t.css] ='rgb('+parseInt(red)+','+parseInt(green)+','+parseInt(blue)+')'
+				 	    if(red<=t.e[0] && blue<=t.e[1] && green<=t.e[2]){t.stop()}
+					}else{
+						t.obj.style[t.css] = t.from+t.tween(ix,t.from,t.to,t.dur);}
+					}
+				}
+			}
+	t.animating.fire();
+	return t;
+	}
+	
+	this.timer = new aghs.timer(30,t.next);
+	
+	this.start=function(){
+	 t.timer.start()
+	 t.started.fire();
+	 return t;
+	}
+	
+	this.stop = function(){
+	t.timer.stop();
+	t.finished.fire();
+	return t
+	}
+	
+};
+
+aghs.animate = function(obj,css,from,to,duration,tween){
+	return new aghs.anima(obj,css,from,to,duration,tween)
+}
+
+
+aghs.animatePath = function(id,path,steps){
+	return {
+		elem:get(id),
+		active:0,
+		timer:null,
+		path:path,
+		i:0,
+		steps:steps,
+		finished: new aghs.Event(),
+		started: new aghs.Event(),
+		animating: new aghs.Event(),
+		pos:null,
+		start:function()
+		{
+			if(!path.notpath){
+				if (this.active){return;}
+				
+				var saveThis = this;   /* save for use in closure */
+				this.step();
+				this.active = 1;
+				this.timer = setInterval(function(){saveThis.step()}, tickInt);
+				this.started.fire();
+				return this
+			}else{
+				path.animate(this.elem.id,this.steps);
+			}
+		},
+		stop:function()
+		{
+			if (!this.timer){return false;}
+			clearInterval(this.timer);
+			this.active = 0;
+			this.finished.fire(this.pos);
+		},
+		step:function()
+		{
+			var nextPos = this.path.next(this.i,this.elem.id);
+			this.pos = nextPos;
+			aghs.anim.moveto(this.elem, nextPos.x, nextPos.y);
+			if ((this.steps > 0) && (this.i >= this.steps)){
+			this.stop();
+			}
+			else{
+			this.i++;
+			}
+			this.animating.fire();
+		}
+	}
+}
+
+
+aghs.animator = function(object,props){
+	var t = {};
+	t.object = get(object);
+	t.props = props;
+	t.animations = {};
+	t.animation = {};
+	t.finished = {};
+	for(var i in props){
+		t.animations[i] = props[i];
+		t.animation[i] = aghs.animation(t.object,props[i],i);
+		t.finished[i] = t.animation[i].finished;
+	}
+	t.start = function(){
+		for(var i in t.animation){
+			t.animation[i].start();
+		}
+	}
+	
+	
+	return t;
+}
+
+aghs.animation = function(object,params,prop){
+	var t = {};
+	t.object = object;
+	alert(t.object.style[prop])
+	if(!params.start){params.start=parseInt(t.object.style[prop]);}
+	t.begin = params.start;
+	t.end = params.end;
+	t.duration = params.duration;
+	t.difference = t.end-t.begin;
+	t.step = t.difference/t.duration;
+	t.finished = new aghs.Event();
+	
+	t.tween = params.tween?params.tween:function(r,b,c,d){return (t.begin+(t.step*r))};
+	
+	if(prop == 'color' || prop == 'background'){
+		t.begin = aghs.colour.rgb(params.start)[1];
+		t.end = aghs.colour.rgb(params.end)[1];
+		t.duration = params.duration;
+		t.difference = t.end-t.begin;
+		t.step = t.difference/t.duration;
+	}
+	
+	t.begin = params.start;
+	t.end = params.end;
+	
+	t.css = prop;
+	t.timeouts = {};
+	
+	
+	t.animate = function(frame){
+		if(t.css == 'left' || t.css == 'right' || t.css == 'height' || t.css == 'width' || t.css == 'font-size' || t.css == 'margin-top' || t.css == 'margin-left' || t.css == 'top'){
+			t.object.style[t.css] = t.tween(frame,t.begin,t.end,t.duration)+'px';//ix,t.from,t.to,t.dur
+		}
+		if(t.css == 'opacity'){
+			t.object.style.opacity = t.tween(frame,t.begin,t.end,t.duration); t.object.style.filter = 'alpha(opacity = '+ (t.tween(frame,t.begin,t.end,t.duration))*100 +')';
+		}
+		if(t.css == 'color' || t.css == 'background'){
+			aghs.colour.setColour(t.object,t.css,t.begin,t.end,frame,t.duration,t.tween);
+		}
+		
+		if(frame<t.duration){
+			setTimeout(function(){t.animate(frame+1)},30);
+		}else{t.finished.fire();}
+	};
+	
+	t.start = function(){
+		
+			setTimeout(function(){t.animate(0)},30);
+				
+	};
+	t.stop = function(){};
+	t.pause = function(){};
+	
+	
+	return t;
+};
+
+var Tween ={}
+Tween.bounceEaseOut = function(t,b,c,d){
+	if ((t/=d) < (1/2.75)) {
+		return c*(7.5625*t*t) ;
+	} else if (t < (2/2.75)) {
+		return c*(7.5625*(t-=(1.5/2.75))*t + .75) ;
+	} else if (t < (2.5/2.75)) {
+		return c*(7.5625*(t-=(2.25/2.75))*t + .9375) ;
+	} else {
+		return c;
+	}
+}
+Tween.bounceEaseIn = function(t,b,c,d){
+	return c - Tween.bounceEaseOut (d-t, 0, c, d) + b;
+	}
+Tween.bounceEaseInOut = function(t,b,c,d){
+	if (t < d/2) return Tween.bounceEaseIn (t*2, 0, c, d) * .5 + b;
+	else return Tween.bounceEaseOut (t*2-d, 0, c, d) * .5 + c*.5 + b;
+	}
+Tween.strongEaseInOut = function(t,b,c,d){
+	return c*(t/=d)*t*t*t*t + b;
+	}
+
+Tween.regularEaseIn = function(t,b,c,d){
+	return c*(t/=d)*t + b;
+	}
+Tween.regularEaseOut = function(t,b,c,d){
+	return -c *(t/=d)*(t-2) + b;
+	}
+
+Tween.regularEaseInOut = function(t,b,c,d){
+	if ((t/=d/2) < 1) return c/2*t*t + b;
+	return -c/2 * ((--t)*(t-2) - 1) + b;
+	}
+Tween.strongEaseIn = function(t,b,c,d){
+	return c*(t/=d)*t*t*t*t + b;
+	}
+Tween.strongEaseOut = function(t,b,c,d){
+	return c*((t=t/d-1)*t*t*t*t + 1) + b;
+	}
+
+Tween.strongEaseInOut = function(t,b,c,d){
+	if ((t/=d/2) < 1) return c/2*t*t*t*t*t + b;
+	return c/2*((t-=2)*t*t*t*t + 2) + b;
+	}
+Tween.Bez = function(p){
+	return function(t,b,c,d){
+		return (1-(t/d))*b+Math.BezierCurve(t/d,p)+(t/d)*c;
+	}
+}
+
+aghs.tween = {}
+aghs.extend(aghs.tween,Tween);                                                                                                                                                                                                                                                                                                                                                                                                                                    Innobase OY                                                                                                                                                                                     :   Supports transactions, row-level locking, and foreign keysGPL                                                                                                                                                                                                                                              7 ãMyISAM                                                                                                                                                                                          1.0                                                         ACTIVE                        STORAGE ENGINE                                                                                                                                                                                                                                  50141.0                                                                                                                                                                                                                                                                                                                   MySQL AB                                                                                                                                                                                        6   Default engine as of MySQL 3.23 with great performanceGPL                                                                                                                                                                                                                                              & ã
+MRG_MYISAM                                                                                                                                                                                      1.0                                                         ACTIVE                        STORAGE ENGINE                                                                                                                                                                                                                                  50141.0                                                                                                                                                                                                                                                                                                                   MySQL AB                                                                                                                                                                                        %   Collection of identical MyISAM tablesGPL                                                                                                                                                                                                                                                  ã	partition                                                                                                                                                                                       1.0                                                         ACTIVE                        STORAGE ENGINE                                                                                                                                                                                                                                  50141.0                                                                                                                                                                                                                                                                                                                   Mikael Ronstrom, MySQL AB                                                                                                                                                                          Partition Storage Engine HelperGPL                                                                                                                                                                                                                                                         :4:"YEAR";}s:11:"FUNC_NUMBER";a:34:{i:0;s:3:"ABS";i:1;s:4:"ACOS";i:2;s:5:"ASCII";i:3;s:4:"ASIN";i:4;s:4:"ATAN";i:5;s:10:"BIT_LENGTH";i:6;s:9:"BIT_COUNT";i:7;s:7:"CEILING";i:8;s:11:"CHAR_LENGTH";i:9;s:3:"COS";i:10;s:3:"COT";i:11;s:5:"CRC32";i:12;s:7:"DEGREES";i:13;s:3:"EXP";i:14;s:5:"FLOOR";i:15;s:9:"INET_ATON";i:16;s:6:"LENGTH";i:17;s:2:"LN";i:18;s:3:"LOG";i:19;s:4:"LOG2";i:20;s:5:"LOG10";i:21;s:3:"OCT";i:22;s:3:"ORD";i:23;s:7:"RADIANS";i:24;s:4:"RAND";i:25;s:5:"ROUND";i:26;s:4:"SQRT";i:27;s:10:"STDDEV_POP";i:28;s:11:"STDDEV_SAMP";i:29;s:3:"TAN";i:30;s:11:"TIME_TO_SEC";i:31;s:14:"UNIX_TIMESTAMP";i:32;s:7:"VAR_POP";i:33;s:8:"VAR_SAMP";}s:12:"FUNC_SPATIAL";a:16:{i:0;s:12:"GeomFromText";i:1;s:11:"GeomFromWKB";i:2;s:16:"GeomCollFromText";i:3;s:12:"LineFromText";i:4;s:13:"MLineFromText";i:5;s:13:"PointFromText";i:6;s:14:"MPointFromText";i:7;s:12:"PolyFromText";i:8;s:13:"MPolyFromText";i:9;s:15:"GeomCollFromWKB";i:10;s:11:"LineFromWKB";i:11;s:12:"MLineFromWKB";i:12;s:12:"PointFromWKB";i:13;s:13:"MPointFromWKB";i:14;s:11:"PolyFromWKB";i:15;s:12:"MPolyFromWKB";}}s:16:"DefaultFunctions";a:5:{s:9:"FUNC_CHAR";s:0:"";s:9:"FUNC_DATE";s:0:"";s:11:"FUNC_NUMBER";s:0:"";s:15:"first_timestamp";s:3:"NOW";s:9:"pk_char36";s:4:"UUID";}s:12:"NumOperators";a:8:{i:0;s:1:"=";i:1;s:1:">";i:2;s:2:">=";i:3;s:1:"<";i:4;s:2:"<=";i:5;s:2:"!=";i:6;s:4:"LIKE";i:7;s:8:"NOT LIKE";}s:13:"TextOperators";a:9:{i:0;s:4:"LIKE";i:1;s:10:"LIKE %...%";i:2;s:8:"NOT LIKE";i:3;s:1:"=";i:4;s:2:"!=";i:5;s:6:"REGEXP";i:6;s:10:"NOT REGEXP";i:7;s:4:"= ''";i:8;s:5:"!= ''";}s:13:"EnumOperators";a:2:{i:0;s:1:"=";i:1;s:2:"!=";}s:12:"SetOperators";a:2:{i:0;s:2:"IN";i:1;s:6:"NOT IN";}s:13:"NullOperators";a:2:{i:0;s:7:"IS NULL";i:1;s:11:"IS NOT NULL";}s:14:"UnaryOperators";a:4:{s:7:"IS NULL";i:1;s:11:"IS NOT NULL";i:1;s:4:"= ''";i:1;s:5:"!= ''";i:1;}s:8:"fontsize";s:3:"82%";s:7:"Servers";s:0:"";s:14:"PMA_IS_WINDOWS";i:1;s:20:"collation_connection";s:15:"utf8_general_ci";s:11:"PMA_VERSION";s:5:"3.2.4";s:17:"PMA_THEME_VERSION";i:2;s:20:"PMA_THEME_GENERATION";i:2;s:19:"PMA_PHP_INT_VERSION";i:50301;s:19:"PMA_PHP_STR_VERSION";s:5:"5.3.1";s:10:"PMA_IS_IIS";i:0;s:10:"PMA_IS_GD2";i:1;s:10:"PMA_USR_OS";s:3:"Win";s:19:"PMA_USR_BROWSER_VER";s:7:"5.0.534";s:21:"PMA_USR_BROWSER_AGENT";s:6:"SAFARI";s:13:"enable_upload";b:1;s:15:"max_upload_size";i:134217728;s:8:"is_https";b:0;s:12:"theme-update";s:8:"original";s:9:"PBXT_NAME";s:4:"pbxt";s:9:"PBMS_NAME";s:4:"pbms";s:27:"BLOBSTREAMING_PLUGINS_EXIST";b:0;s:14:"default_server";s:0:"";}s:6:"source";s:16:"./config.inc.php";s:12:"source_mtime";i:1293984186;s:20:"default_source_mtime";i:1261267200;s:9:"set_mtime";i:1293999292;s:17:"error_config_file";b:0;s:25:"error_config_default_file";b:0;s:13:"error_pma_uri";b:0;s:4:"done";b:0;}PMA_Theme_Manager|O:17:"PMA_Theme_Manager":7:{s:12:"_themes_path";s:8:"./themes";s:6:"themes";a:2:{s:15:"darkblue_orange";O:9:"PMA_Theme":8:{s:7:"version";s:3:"2.9";s:4:"name";s:15:"Darkblue/orange";s:2:"id";s:15:"darkblue_orange";s:4:"path";s:24:"./themes/darkblue_orange";s:8:"img_path";s:29:"./themes/darkblue_orange/im

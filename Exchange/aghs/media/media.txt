@@ -1,0 +1,75 @@
+function wmpCreate(url) { 
+
+    var str = ""; 
+
+    if (is_ie) { 
+
+        	// create the WMP for IE 
+
+        	str = '<object id="contentPlayer" classid="CLSID:6BF52A52-394A-11d3-B153-00C04F79FAA6" width="320" height="240">'; 
+
+    } else { 
+
+        	// create it for FF. 
+
+        	str = '<object id="contentPlayer" type="application/x-ms-wmp" data="'+url+'" width="320" height="240">'; 
+
+    } 
+
+    str += '<param name="URL" value="'+url+'" />'; 
+    str += '<param name="uiMode" value="none">'; 
+
+    str += '</object>'; 
+
+    return str; 
+
+} 
+
+document.getElementById('wmpPlayer').innerHTML = wmpCreate('./videos/my_video.wmv'); 
+Step 2. The HTML page you are embedding the player into, needs to have play state and media state handlers if you want to listen for those events.
+
+<!-- Create an event handler for play state change. --> 
+<script language="JavaScript" for="contentPlayer" event="playStateChange(newState)"> 
+    wmpPlayStateChange(newState); 
+</script> 
+
+<!-- Create an event handler for media change. --> 
+<script language="JavaScript" for="contentPlayer" event="mediaChange(Item)"> 
+    wmpMediaChange(Item); 
+</script> 
+Step 3. In javascript (either inline or in a seperate JS file), you need to define the functions that will handle those events
+
+// This function will run every time the Media changes in Windows Media Player 
+function wmpMediaChange(item) { 
+
+    	// get a handle to the Windows Media Player 
+    	var wmp = document.getElementById('contentPlayer'); 
+
+    	// alert the data for convenience 
+    	alert ( wmp.currentMedia.name ); 
+    	alert ( wmp.currentMedia.sourceURL ); 
+
+} 
+
+var playstateValues = new Array("Undefined","Stopped","Paused","Playing","Scan Forward","Scan Reverse","Buffering","Waiting","Media Ended","Transitioning","Ready","Reconnecting"); 
+
+// This function will run every time the Play State changes in Windows Media Player 
+function wmpPlayStateChange(newState) { 
+
+    	// alert the play state value in plain text for convenience 
+    	alert ( playstateValues[newState] ); 
+
+} 
+Step 4. Script Windows Media Player to your hearts content! For example:
+
+var wmp = document.getElementById('contentPlayer'); 
+
+wmp.controls.play(); 
+wmp.controls.pause(); 
+wmp.controls.stop(); 
+wmp.controls.fastForward(); 
+wmp.controls.fastReverse(); 
+wmp.settings.mute = true; 
+wmp.settings.volume = 50; 
+wmp.fullScreen = true; 
+wmp.URL = './videos/my_video.wmv';

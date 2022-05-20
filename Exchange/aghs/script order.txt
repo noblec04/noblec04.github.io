@@ -1,0 +1,17 @@
+<script type="text/javascript" src="aghs/aghs.js" ></script>
+<script type="text/javascript" src="aghs/class/class.js"></script>
+<script type="text/javascript" src="aghs/function/function.js" ></script>
+<script type="text/javascript" src="aghs/filesystem/filesystem.js" ></script>
+<script type="text/javascript" src="aghs/object/object.js" ></script>
+<script type="text/javascript" src="aghs/enumerable/enumerable.js"></script>
+<script type="text/javascript" src="aghs/array/array.js"></script>
+<script type="text/javascript" src="aghs/event/event.js" ></script>
+<script type="text/javascript" src="aghs/math/math.js" ></script>
+<script type="text/javascript" src="aghs/element/element.js" ></script>
+<script type="text/javascript" src="aghs/number/number.js" ></script>
+<script type="text/javascript" src="aghs/string/string.js"></script>
+<script type="text/javascript" src="aghs/draw/draw.js" ></script>
+<script type="text/javascript" src="aghs/animation/animation.js" ></script>
+<script type="text/javascript" src="aghs/ajax/ajax.js" ></script>
+<script type="text/javascript" src="aghs/mouse/mouse.js" ></script>
+<script type="text/javascript" src="aghs/shortcuts.js" ></script>

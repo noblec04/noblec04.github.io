@@ -1,0 +1,47 @@
+<?php
+$file = 'path/to/file.txt';
+$file_contents = file_get_contents($file);
+
+$fh = fopen($file, "w");
+$file_contents = str_replace('foo','bar',$file_contents);
+fwrite($fh, $file_contents);
+fclose($fh);
+?> 
+
+UPLOAD WITH POST
+
+$target_path = "uploads/";
+
+$target_path = $target_path . basename( $_FILES['uploadedfile']['name']); 
+
+if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
+    echo "The file ".  basename( $_FILES['uploadedfile']['name']). 
+    " has been uploaded";
+} else{
+    echo "There was an error uploading the file, please try again!";
+}
+
+
+OPEN FILE
+$ourFileName = "testFile.txt";
+$ourFileHandle = fopen($ourFileName, 'w') or die("can't open file");
+fclose($ourFileHandle);
+
+
+TRUNCATE 
+
+$myFile = "testFile.txt";
+$fh = fopen($myFile, 'w');
+fclose($fh);
+
+
+APPEND
+
+$myFile = "testFile.txt";
+$fh = fopen($myFile, 'a') or die("can't open file");
+$stringData = "New Stuff 1\n";
+fwrite($fh, $stringData);
+$stringData = "New Stuff 2\n";
+fwrite($fh, $stringData);
+fclose($fh);
+

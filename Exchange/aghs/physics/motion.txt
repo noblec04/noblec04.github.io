@@ -1,0 +1,60 @@
+v=u+at
+
+s=1/2(u+v)t
+
+s=ut+1/2at^2
+
+s=vt-1/2at^2
+
+v^2=u^2+2as
+
+a=(v-u)/t
+
+s = the distance between initial and final positions (displacement) (sometimes denoted R or x)
+u = the initial velocity (speed in a given direction)
+v = the final velocity
+a = the constant acceleration
+t = the time taken to move from the initial state to the final state
+
+acceleration due to force
+
+F = ma,
+
+y(x; t) = Acos(kx - wt) 
+
+where the wave number k and angular frequency w are related to the wavelength and frequency/period
+
+k =2pie/wavelength
+
+w = 2pief
+
+The speed of the wave is
+
+v = wavelengthf or w = vk
+
+
+E^2 = m^2 * c^4 + P^2 * c^2
+
+zero mass
+
+E = pc
+
+relativistic mass
+
+Mrel = Mrest/sqrt(1-v^2/c^2)
+
+photon momentum related to frequency
+
+p = hf/c
+
+photon momentum related to wavelength
+
+p = h/wavelength
+
+wavelength of a particle
+
+wl = h/mv
+
+energy of a photon
+
+E = hf

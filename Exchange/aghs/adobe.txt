@@ -1,0 +1,234 @@
+adobe.Loader = (function() {	
+	var ATTR_TOKEN = "#ATTR#",
+		STATUS_NONE = 0,
+		STATUS_DONE = 1,
+		STATUS_ERROR = 2,
+		SRC_PATH_TRIG = "_/",
+		PATH_CAPTURE = /(^.+\.)(\w+)(\?[^$]*$|$)/,
+		SCRIPT_TAG = "<script #ATTR#><\/script>",
+		LINK_TAG = "<link #ATTR# \/>",
+		jscompress = !!adobe.jscompress,
+		compress_path = adobe.jscompress_path,
+		renderStatus = {},
+		assets = {
+			JS: [ SCRIPT_TAG, "src", {
+				type:"text/javascript"
+			}],
+			CSS: [ LINK_TAG, "href", {
+				type:"text/css",
+				rel:"stylesheet"
+			}]
+		},
+		renderAsset = function(path, user_attributes) {	
+			var explode = path.match(PATH_CAPTURE), //break apart the path argument
+				ext = explode[2], //file extension
+				q = explode[3]; //query
+			
+			if(!ext) { return; } //didn't find a suitable file extension?
+				
+			var type = ext.toUpperCase(), //declare file type
+				data = assets[type]; //declare data point
+				
+			if(!data) { return; } //is asset type defined in here?
+				
+			/* compression hack here. Still implementing server compression */
+			if(type == "JS" && jscompress) {
+				path = explode[1] + compress_path + "." + ext + q;
+			}
+				
+			var out = {},
+				attrs = [],
+				attrN = "",
+				code = data[0],
+				pathAtt = data[1],
+				reqAtt = data[2];
+				
+			for(attrN in reqAtt) { //copy required attributes 
+				out[attrN] = reqAtt[attrN];
+			}
+			
+			out[pathAtt] = path; //set path attribute
+			
+			if(user_attributes) { //copy user-defined attributes
+				for(attrN in user_attributes) {
+					out[attrN] = user_attributes[attrN];
+				}
+			}
+			
+			for(attrN in out) { //create attribute text eg. name="value"
+				attrV = out[attrN];				
+				attrs.push((attrV) ? (attrN + '="' + attrV + '"') : attrN);
+			}
+			
+			return code.replace(ATTR_TOKEN, attrs.join(" "));
+		};
+	
+	return {
+		/*
+			Function: requireAsset
+			
+			Parameters:
+			path - location string (Paths beginning with "_/" will be relative to the library location)
+			user_attributes - object instance (optional)
+			
+			Returns:
+			Integer indicating render status (0=None, 1=Done, 2=Error)
+		*/
+		
+		requireAsset : function(path, user_attributes) {
+			if(!path) { return STATUS_NONE; } //insurance from bad calls
+			
+			if(path.indexOf(SRC_PATH_TRIG) === 0) { //did we request a library relative path?
+				path = path.replace(SRC_PATH_TRIG, adobe.getLibraryPath()); //replace the trigger with the path
+			}
+			
+			var currentStatus = (renderStatus[path] || STATUS_NONE); //declare status?
+			
+			if(currentStatus > STATUS_NONE) { return currentStatus; } //this path was already written, terminally failed, or in progress?
+								
+			var txt = renderAsset(path, user_attributes);
+			
+			if(!txt) { 
+				return (renderStatus[path] = STATUS_ERROR);
+			} else {
+				renderStatus[path] = currentStatus = STATUS_DONE; //new request, log it before writing to prevent recursion
+			}
+			
+			document.write(txt);
+			
+			return currentStatus;
+		}
+	};
+})();
+
+
+
+adobe.StateManager = (function() {
+	var loadedUri;
+	var loadedCookies = {};
+	var cookiesDays = {};
+	var cookies = adobe.Cookie;
+	
+	function getUri() {
+		return loadedUri || (loadedUri = window.location.search.toQueryParams());	
+	}
+	
+	function getUriId(id) {
+		return getUri()[id];	
+	}
+	
+	function getSaveDays(ns) {
+		return cookiesDays[ns] || 0;
+	}
+	
+	function setSaveDays(ns, days) {
+		cookiesDays[ns] = days;
+		return;
+	}
+	
+	function getSave(ns) {
+		return loadedCookies[ns] || (loadedCookies[ns] = (cookies.get(ns) || "").toQueryParams());
+	}
+	
+	function clearSave(ns, id) {
+		var save = getSave(ns);
+		delete save[id];
+		var val = $H(save).toQueryString();				
+		return val ? cookies.set(ns, val, getSaveDays(ns)) : cookies.remove(ns);
+	}
+	
+	function setSave(ns, id, val) {
+		var itemsToSave;
+		
+		if(val instanceof Array) { //since Array is also an Object, order is important here
+			itemsToSave = (val).join(",");
+		} else if(typeof val == 'object') {
+			itemsToSave = $H(val).inject([], function(arr, state) {
+				var value = state.value || 0;  //use numbers instead of booleans if present
+				if(value && typeof value == 'boolean') {
+					value = 1; //use numbers instead of booleans if present
+				}
+				arr.push(state.key + ":" + value);
+				return arr;
+			}).join(",");
+		} else if(typeof val == 'string') {
+			itemsToSave = val;
+		} else if(typeof val == 'boolean') {
+			itemsToSave = val ? "1" : "0";
+		} else if(typeof val == 'number' && isFinite(val)) {
+			itemsToSave = val.toString();
+		}
+		
+		if(!itemsToSave) { return clearSave(ns, id); }
+		
+		getSave(ns)[id] = itemsToSave;
+				
+		cookies.set(ns, $H(getSave(ns)).toQueryString(), getSaveDays(ns));
+		return;
+	}
+	
+	var c0nstruct0r = function(nam3spac3, days2save) {
+		this.ns = nam3spac3;
+		setSaveDays(nam3spac3, days2save || 0);
+		return this;
+	};
+	
+	c0nstruct0r.prototype = {
+/*------------------------------------------------------------------------------
+
+		Method: setCookieParam
+		
+		Parameters:
+		id - string
+		state - object, array, boolean, number, string
+		
+------------------------------------------------------------------------------*/		
+		setCookieParam: function(id, state) {
+			setSave(this.ns, id, state); //lazy loader and assignment
+			return;
+		},
+/*------------------------------------------------------------------------------
+
+		Method: getCookieParam
+		
+		Parameters:
+		id - string
+		
+		Returns:
+		object, array, boolean, number, string
+		
+------------------------------------------------------------------------------*/		
+		getCookieParam: function(id) {
+			return getSave(this.ns)[id];
+		},
+/*------------------------------------------------------------------------------
+		
+		Method: removeCookieParam
+		
+		Parameters:
+		id - string
+		
+		Returns:
+		Nothing
+		
+------------------------------------------------------------------------------*/
+		removeCookieParam: function(id) {
+			return clearSave(this.ns, id);
+		},
+/*------------------------------------------------------------------------------
+		
+		Method: getQueryParam
+		
+		Parameters:
+		id - string
+		
+		Returns:
+		object, array, boolean, number, string
+		
+------------------------------------------------------------------------------*/
+		getQueryParam: function(id) {
+			return (id) ? getUriId(id) : getUri();
+		}
+	};
+	return c0nstruct0r;
+})();

@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Warwick to Wisconsin | home</title>
+<meta content="blendTrans(Duration=1.0)" http-equiv="Page-Enter">
+<script type="text/javascript" src="aghs/aghs.js" ></script>
+<script type="text/javascript" src="aghs/class/class.js"></script>
+<script type="text/javascript" src="aghs/function/function.js" ></script>
+<script type="text/javascript" src="aghs/filesystem/filesystem.js" ></script>
+<script type="text/javascript" src="aghs/object/object.js" ></script>
+<script type="text/javascript" src="aghs/enumerable/enumerable.js"></script>
+<script type="text/javascript" src="aghs/array/array.js"></script>
+<script type="text/javascript" src="aghs/event/event.js" ></script>
+<script type="text/javascript" src="aghs/math/math.js" ></script>
+<script type="text/javascript" src="aghs/math/logic.js" ></script>
+<script type="text/javascript" src="aghs/physics/physics.js" ></script>
+<script type="text/javascript" src="aghs/element/element.js" ></script>
+<script type="text/javascript" src="aghs/number/number.js" ></script>
+<script type="text/javascript" src="aghs/string/string.js"></script>
+<script type="text/javascript" src="aghs/draw/draw.js" ></script>
+<script type="text/javascript" src="aghs/draw/3d.js" ></script>
+<script type="text/javascript" src="aghs/animation/animation.js" ></script>
+<script type="text/javascript" src="aghs/ajax/ajax.js" ></script>
+<script type="text/javascript" src="aghs/media/media.js" ></script>
+<script type="text/javascript" src="aghs/mouse/mouse.js" ></script>
+<script type="text/javascript" src="aghs/shortcuts.js" ></script>
+
+<style>
+a{
+	text-decoration:none;
+	color:#fff;
+	border-radius:4px;
+}
+a:hover{
+	text-decoration:none;
+	color:#CCC;
+}
+</style>
+
+</head>
+
+<body id="bod" style="font-family:'calibri',Arial; background:#333;color:#999;">
+<div id="head" style="border:solid thin #ddd; cursor:pointer; background:#666; border-radius:0px; height:120px; width:960px; margin:auto; margin-top:50px; overflow:hidden; ">
+
+	<div id="title" style="margin:auto; margin-top:10px; color:#333; font-size:24px; text-align:center; font-family:'calibri',Arial, Helvetica, sans-serif; font-weight:bold; float:center;" onclick="aghs.commands['home']()">Warwick -> Wisconsin.&nbsp;&nbsp; <br /> A Warwick Engineer In Wisconsin
+<!--<span style="font-size:16px; font-weight:lighter;">07940015342</span>--></div>
+<div style="position:relative; float:centre; text-align:center; left:15px; top:10px;">
+<a href="#about" onclick="aghs.commands['about']()">about</a> | <a href="#academics" onclick="aghs.commands['academics']()">academics and projects</a> | <a href="#gettinghere" onclick="aghs.commands['get']()">getting here</a> | <a href="#exploring" onclick="aghs.commands['exp']()">exploring</a> | <!--<br />-->
+<a href="#acc" onclick="aghs.commands['acc']()">Accomadation</a> | <a href="#spirit" onclick="aghs.commands['spirit']()">The Badger Spirit</a> | <a href="#cost" onclick="aghs.commands['cost']()">Costs</a>
+</div>
+</div>
+<div id="main" style="width:984px; margin:auto; margin-top:20px; overflow:hidden; ">
+<div id="image" style=" margin-top:0px; color:#333; font-size:24px; text-align:center; font-family:'calibri',Arial, Helvetica, sans-serif; float:center; height:450px;">
+<img id="titleimg" style="margin-top:-50px;" src="" alt="click to scroll through images" onClick="changeimg()" />
+</div>
+</div>
+</div>
+
+</div>
+
+<script type="text/javascript">
+get('head').fx({'background':{start:'#ffffff', end:aghs.colour.random(),duration:40}
+})
+
+get('title').css({color:'#ffffff'});
+
+var num = 1;
+
+get('titleimg').src='bg/'+num+'.jpg';
+get('head').fx({'border-color':{start:'#333333',end:'#dddddd',duration:80}
+})
+
+function changeimg()
+{
+num = num<53?num+1:1;
+
+get('titleimg').src='bg/'+num+'.jpg';
+}
+
+aghs.io.addCommand('home',function(){window.location.href = 'index.html';})
+aghs.io.addCommand('about',function(){window.location.href = 'about.html';})
+aghs.io.addCommand('academics',function(){window.location.href = 'academics.html';})
+aghs.io.addCommand('get',function(){window.location.href = 'gettinghere.html';})
+aghs.io.addCommand('exp',function(){window.location.href = 'exploring.html';})
+aghs.io.addCommand('acc',function(){window.location.href = 'accomadation.html';})
+aghs.io.addCommand('spirit',function(){window.location.href = 'spirit.html';})
+aghs.io.addCommand('cost',function(){window.location.href = 'cost.html';})
+
+aghs.io.getCommand();
+
+//keyboard.on[65].addHandler(function(e){if(e.altKey==true){e.preventDefault();window.open('entry.php')};})
+</script>
+</body>
+</html>
+
