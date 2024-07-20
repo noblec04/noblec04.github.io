@@ -8,7 +8,7 @@
 <body>
 <div id="doc" class="yui-t7">
   <div id="hd">
-    <div id="header"><h1 class="container">
+    <div id="header" onClick="window.location.href = 'index.html'" style="cursor:pointer;"><h1 class="container">
 	<div>C</div><div>H</div><div>R</div><div>I</div><div>S</div><div>T</div><div>O</div><div>P</div><div>H</div><div>E</div><div>R</div>
 	<div></div><div>N</div><div>O</div><div>B</div><div>L</div><div>E</div><div></div><div>MSc</div><div></div><div>MEng</div><div></div><div>PhD</div>
 	</h1></div>
@@ -23,14 +23,23 @@
     <td  background="include/matrix.png" style="background-size: cover; color:#FFFFFF; filter: saturate(15%);" height="150px">Coding</td><!-- Col 4 -->
  </tr>
   <tr><!-- Row 2 -->
-     <td style="background-size: cover; color:#FFFFFF; filter: saturate(15%);" height="300px">
+     <td style="background-size: cover; filter: saturate(15%); text-align: left;" height="300px">
       <a href="https://github.com/WiSTL/chrisn_shock_scripts" title="Shock Scripts">
         RMI analysis scripts
-      </a>  - Matlab scripts used during a PhD program. They were mainly used to analyze turbulent fluid mixing using image analysis of PLIF and PIV results.
+      </a><br/>  - Matlab scripts used during a PhD program. They were mainly used to analyze turbulent fluid mixing using image analysis of PLIF and PIV results.<br/><br/>
 
       <a href="https://github.com/noblec04/MatlabGP" title="MatlabGP">
         MatlabGP
-      </a> - Matlab implementation of Gaussian Process models, including Variational and multifidelity models. The flexible kernel class is inspired by the stethno python library. The repository also includes an implementation of variational stochastic gradient decent with reflective boundary conditions.
+      </a><br/> - Matlab implementation of Gaussian Process models, including Variational and multifidelity models. 
+      The flexible kernel class is inspired by the stethno python library.
+      The repository also includes an implementation of variational stochastic gradient decent with reflective boundary conditions.
+      Also a lightweight neural network implementation using the matlab Autodiff package to generate gradients. <br/><br/>
+
+      <a href="https://github.com/noblec04/MatlabFluid" title="MatlabFluid">
+        MatlabFluid
+      </a><br/> - Matlab implementation of scalar, vector and matrix cartesian grids for PDE solving.
+
+
       
      </td><!-- Col 1 -->
   </tr>
